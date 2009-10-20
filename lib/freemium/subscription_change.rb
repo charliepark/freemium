@@ -13,6 +13,8 @@ module Freemium
 
         validates_presence_of :reason
         validates_inclusion_of :reason, :in => %w(new upgrade downgrade expiration cancellation)
+
+        attr_accessible :reason, :subscribable, :original_subscription_plan_id, :original_rate, :new_subscription_plan_id, :new_rate
       end
     end
 

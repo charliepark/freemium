@@ -34,8 +34,11 @@ module Freemium
         after_update :audit_update
         after_destroy :audit_destroy
            
-        validates_presence_of :subscribable
-        validates_associated :subscribable
+        ## JCS: This was modified to NOT validate subscribable on create. I did this because subscribable_id
+        ## doesn't exist until after the models have been saved. I'm not sure how other people create this
+        ## nest of associations with the validation as it was.
+        validates_presence_of :subscribable, :unless => Proc.new {|s| s.new_record?}
+        validates_associated :subscribable, :unless => Proc.new {|s| s.new_record?}
         validates_presence_of :subscription_plan
         validates_presence_of :paid_through, :if => :paid? 
         validates_presence_of :started_on

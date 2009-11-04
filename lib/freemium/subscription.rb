@@ -21,9 +21,17 @@ module Freemium
         has_many :transactions, :class_name => "FreemiumTransaction", :foreign_key => :subscription_id
               
         named_scope :paid, :include => [:subscription_plan], :conditions => "freemium_subscription_plans.rate_cents > 0"
-        named_scope :due, :conditions =>  ['paid_through <= ?', Date.today] # could use the concept of a next retry date
-        named_scope :expired, :conditions => ['expire_on >= paid_through AND expire_on <= ?', Date.today]
-              
+        named_scope :due, lambda {
+          {
+            :conditions =>  ['paid_through <= ?', Date.today] # could use the concept of a next retry date
+          }
+        }
+        named_scope :expired, lambda {
+          {
+            :conditions => ['expire_on >= paid_through AND expire_on <= ?', Date.today]
+          }
+       }
+
         before_validation :set_paid_through
         before_validation :set_started_on
         before_save :store_credit_card_offsite

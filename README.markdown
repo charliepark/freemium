@@ -1,12 +1,10 @@
-= Freemium
+## Freemium
 
-The Freemium plugin attempts to encapsulate the Right Way to offer service subscriptions. It is built to handle multiple subscription plans (free, premium, premium plus, etc.), let you control your own invoices, and to interact with any merchant gateway that supports either automated recurring billing or credit card storage.
+Freemium was written by Lancy Ivy in an attempt to "encapsulate the Right Way to offer service subscriptions".
 
-Freemium is a different beast from ActiveMerchant. Where the latter is optimized for one-off billing of credit cards (as in a retail environment), Freemium is optimized for storage and recurring billing of credit cards. This makes it a much cleaner and more complete solution for handling subscriptions. At the time of this writing, however, Freemium actually depends on ActiveMerchant because of its excellent CreditCard model, which I plan to steal.
+This version is maintained by ExpanDrive for use on their Strongspace service.
 
-This plugin was born out of my attempts to figure out the correct way to handle subscriptions. I decided that the safest/cleanest way was to simply keep track of how far out the subscription had been paid, and when that date came near, bill the subscription again to extend the paid_through date. The approach has turned out well, I think, though I strongly encourage anyone and everyone to review the processes in this plugin to make sure the assumptions it makes are appropriate.
-
-= Gateway Requirements
+## Gateway Requirements
 
 Rule #1: You never want to store credit card numbers yourself. This means that you need a gateway that either provides Automated Recurring Billing (ARB - a common offering) or credit card storage (e.g. TrustCommerce's Citadel).
 
@@ -16,27 +14,27 @@ Freemium will only work with ARB modules that provide an API to retrieve and rev
 
 So what we really need is a list of known good and known bad gateways. The list below is just the beginning, off the top of my head.
 
-=== Good Gateways:
+$$$ Good Gateways:
 * TrustCommerce with Citadel (can use Citadel and/or ARB)
 * Braintree Payment Solutions (SecureVault, or ARB)
 
-=== Probably Good Gateways:
+$$$ Probably Good Gateways:
 * Authorize.net (CIM, or ARB if they also offer transaction review API)
 
-=== Bad Gateways:
+### Bad Gateways:
 * LoudCommerce's LinkPoint (no storage, and no transaction review)
 
-= Expiration
+# Expiration
 
 I've tried to build Freemium with the understanding that sometimes a cron task might not run, and if that happens the customers should not get screwed. That means, for example, not expiring a customer account just because a billing process didn't run. So the process for expiring a subscription is as follows: the first nightly billing process that runs _after_ a subscription's last paid day will set the final expiration date of that subscription. The final expiration date will be calculated as a certain number of days (the grace period) after the date of the billing process (grace begins when the program _knows_ the account is pastdue). The first billing process that runs on or after the expiration date will then actually expire the subscription.
 
 So there's some possible slack in the timeline. Suppose a subscription is paid through the 14th and there's a 2 day grace period. That means if a billing process runs on the 13th, then not until the 15th, the subscription will be set to expire on the 17th - the subscriber gets an extra day of grace because your billing process didn't run.
 
-= Misc
+# Misc
 * If there's no grace period then the same billing process will both set the expiration date and then actually expire the subscription, thanks to the order of events.
 * Expiring a subscription means downgrading it to a free plan (if any) or removing the plan altogether.
 
-= Install
+# Install
 
 1) Generate and run the migration:
 

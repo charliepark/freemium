@@ -3,7 +3,9 @@
 #   rate_cents:         how much this plan costs, in cents
 #   rate:               how much this plan costs, in Money
 #   yearly:             whether this plan cycles yearly or monthly
-#
+#   key:                A string that is used to reference a feature_set that corresponds to this plan in config/freemium_feature_sets.yml
+
+
 module Freemium
   module SubscriptionPlan
     include Rates
@@ -17,8 +19,10 @@ module Freemium
           :join_table => :freemium_coupons_subscription_plans, :foreign_key => :subscription_plan_id, :association_foreign_key => :coupon_id
         
         composed_of :rate, :class_name => 'Money', :mapping => [ %w(rate_cents cents) ], :allow_nil => true
-        
-        validates_uniqueness_of :redemption_key, :allow_nil => true, :allow_blank => true
+
+        ## JCS: This used to validate 'redemption_key', which only exists on the coupon, and it would always fail.
+        ## I'm still not sure how that was supposed to wor, but I'm going to validate "key" which makes more sense.
+        validates_uniqueness_of :key
         validates_presence_of :name
         validates_presence_of :rate_cents
       end

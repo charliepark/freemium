@@ -2,7 +2,6 @@
 #   subscribable:         the model in your system that has the subscription. probably a User.
 #   subscription_plan:    which service plan this subscription is for. affects how payment is interpreted.
 #   paid_through:         when the subscription currently expires, assuming no further payment. for manual billing, this also determines when the next payment is due.
-#   billing_key:          the id for this user in the remote billing gateway. may not exist if user is on a free plan.
 #   last_transaction_at:  when the last gateway transaction was for this account. this is used by your gateway to find "new" transactions.
 #
 module Freemium
@@ -34,8 +33,6 @@ module Freemium
 
         before_validation :set_paid_through
         before_validation :set_started_on
-        before_save :store_credit_card_offsite
-        before_save :discard_credit_card_unless_paid
         before_destroy :cancel_in_remote_system
         
         after_create :audit_create
@@ -66,6 +63,10 @@ module Freemium
     
     protected
 
+    def billing_key
+      self.credit_card.billing_key
+    end
+
     def set_paid_through
       if subscription_plan_id_changed? && !paid_through_changed?
         if paid?
@@ -93,34 +94,6 @@ module Freemium
 
     def set_started_on
       self.started_on = Date.today if subscription_plan_id_changed?
-    end
-
-    # Simple assignment of a credit card. Note that this may not be
-    # useful for your particular situation, especially if you need
-    # to simultaneously set up automated recurrences.
-    #
-    # Because of the third-party interaction with the gateway, you
-    # need to be careful to only use this method when you expect to
-    # be able to save the record successfully. Otherwise you may end
-    # up storing a credit card in the gateway and then losing the key.
-    #
-    # NOTE: Support for updating an address could easily be added
-    # with an "address" property on the credit card.
-    def store_credit_card_offsite
-      if credit_card && credit_card.changed? && credit_card.valid? 
-        response = billing_key ? Freemium.gateway.update(billing_key, credit_card, credit_card.address) : Freemium.gateway.store(credit_card, credit_card.address)
-        raise Freemium::CreditCardStorageError.new(response.message) unless response.success?
-        self.billing_key = response.billing_key
-        self.expire_on = nil
-        self.credit_card.reload # to prevent needless subsequent store() calls
-      end
-    end
-    
-    def discard_credit_card_unless_paid
-      unless paid?
-        credit_card.destroy if credit_card
-        cancel_in_remote_system
-      end
     end
     
     def cancel_in_remote_system

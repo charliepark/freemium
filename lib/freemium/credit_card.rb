@@ -1,3 +1,10 @@
+# == Attributes
+#   billing_key: the id for this user in the remote billing gateway. may not exist if user is on a free plan.
+#   card_type: the issuing credit card company, can be assigned automatically from the credit card number during  :sanitize_data
+#   display_number: The last four digits of the credit card number, stored as "XXX-XXX-XXX-NNNN" automatically when a number is assigned to self.number
+#   expiration_date: the credit card expiration date
+#   zip_code: the credit card zip code
+
 module Freemium
   module CreditCard
 
@@ -16,10 +23,26 @@ module Freemium
       'laser'              => /^(6304[89]\d{11}(\d{2,3})?|670695\d{13})$/
     }
 
+    DISPLAY_COMPANIES = {
+      'visa'               => 'Visa',
+      'master'             => 'MasterCard',
+      'discover'           => 'Discover Card',
+      'american_express'   => 'American Express',
+      'diners_club'        => 'Diners Club',
+      'jcb'                => 'JCB Card',
+      'switch'             => 'Switch Card',
+      'solo'               => 'SOLO',
+      'dankort'            => 'Dankort',
+      'maestro'            => 'Maestro',
+      'forbrugsforeningen' => 'Forbrugsforeningen',
+      'laser'              => 'Laser'
+    }
+
     def self.included(base)
       base.class_eval do
         # Essential attributes for a valid, non-bogus creditcards
-        attr_accessor :number, :month, :year, :first_name, :last_name
+        attr_reader :number
+        attr_accessor :month, :year, :first_name, :last_name
 
         # Required for Switch / Solo cards
         attr_accessor :start_month, :start_year, :issue_number
@@ -33,6 +56,7 @@ module Freemium
         has_one :subscription, :class_name => "FreemiumSubscription"
         
         before_validation :sanitize_data, :if => :changed?
+        before_save :store_credit_card_offsite
       end
       
       base.extend(ClassMethods)
@@ -50,7 +74,32 @@ module Freemium
       self.number = number.to_s.gsub(/[^\d]/, "")
       self.card_type.downcase! if card_type.respond_to?(:downcase)
       self.card_type = self.class.card_type?(number) if card_type.blank?
-      self.display_number = display_number
+    end
+
+    # Simple assignment of a credit card. Note that this may not be
+    # useful for your particular situation, especially if you need
+    # to simultaneously set up automated recurrences.
+    #
+    # Because of the third-party interaction with the gateway, you
+    # need to be careful to only use this method when you expect to
+    # be able to save the record successfully. Otherwise you may end
+    # up storing a credit card in the gateway and then losing the key.
+    #
+    # NOTE: Support for updating an address could easily be added
+    # with an "address" property on the credit card.
+    def store_credit_card_offsite
+      if self.changed? && self.valid?
+        response = billing_key ? Freemium.gateway.update(billing_key, self, self.address) : Freemium.gateway.store(self, self.address)
+        raise Freemium::CreditCardStorageError.new(response.message) unless response.success?
+        self.billing_key = response.billing_key
+      end
+    end
+    
+    def discard_credit_card_unless_paid
+      unless subscription.paid?
+        cancel_in_remote_system
+        self.destroy
+      end
     end
     
     public
@@ -174,12 +223,16 @@ module Freemium
       "#{@first_name} #{@last_name}"
     end
 
-    # Show the card number, with all but last 4 numbers replace with "X". (XXXX-XXXX-XXXX-4338)
-    def display_number
-      self['display_number'] ||= self.class.mask(number)
-      self['display_number']
+    def number=(new_number)
+      @number = new_number
+      ## Also update the display number
+      write_attribute(:display_number, self.class.mask(number))
     end
-    
+
+    def display_card_type
+      DISPLAY_COMPANIES[card_type]
+    end
+
     def last_digits
       self.class.last_digits(number)
     end

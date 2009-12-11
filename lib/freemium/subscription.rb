@@ -48,7 +48,7 @@ module Freemium
         validates_presence_of :paid_through, :if => :paid? 
         validates_presence_of :started_on
         validates_presence_of :credit_card, :if => :paid?
-        validates_associated :credit_card#, :if => :paid?
+        validates_associated :credit_card, :if => :paid?
       end
       base.extend ClassMethods
     end

@@ -156,10 +156,6 @@ module Freemium
         number.to_s.length <= 4 ? number : number.to_s.slice(-4..-1) 
       end
       
-      def mask(number)
-        "XXXX-XXXX-XXXX-#{last_digits(number)}"
-      end
-      
       # Checks to see if the calculated type matches the specified type
       def matching_card_type?(number, card_type)
         card_type?(number) == card_type
@@ -226,7 +222,7 @@ module Freemium
     def number=(new_number)
       @number = new_number
       ## Also update the display number
-      write_attribute(:display_number, self.class.mask(number))
+      write_attribute(:display_number, self.class.last_digits(number))
     end
 
     def display_card_type

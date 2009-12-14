@@ -64,7 +64,11 @@ module Freemium
     protected
 
     def billing_key
-      self.credit_card.billing_key
+      if self.credit_card
+        return self.credit_card.billing_key
+      else
+        return nil
+      end
     end
 
     def set_paid_through

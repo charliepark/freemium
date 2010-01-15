@@ -22,6 +22,7 @@ module Freemium
     def charge!
       # Save the transaction immediately
       @transaction = Freemium.gateway.charge(billing_key, self.installment_amount)
+      @transaction.credit_card = "#{self.credit_card.display_card_type} #{self.credit_card.display_number}"
       self.transactions << @transaction
       self.last_transaction_at = Time.now # TODO this could probably now be inferred from the list of transactions
       self.save(false)

@@ -21,7 +21,7 @@ module Freemium
         composed_of :rate, :class_name => 'Money', :mapping => [ %w(rate_cents cents) ], :allow_nil => true
 
         ## JCS: This used to validate 'redemption_key', which only exists on the coupon, and it would always fail.
-        ## I'm still not sure how that was supposed to wor, but I'm going to validate "key" which makes more sense.
+        ## I'm still not sure how that was supposed to work, but I'm going to validate "key" which makes more sense.
         validates_uniqueness_of :key
         validates_presence_of :name
         validates_presence_of :rate_cents

@@ -1,7 +1,7 @@
 class SubscriptionMailer < ActionMailer::Base
   self.template_root = File.dirname(__FILE__)
 
-  def invoice(transaction)
+  def payment_receipt(transaction)
     setup_email(transaction.subscription.subscribable)
     @subject              = "Your Invoice"
     @body[:amount]        = transaction.amount

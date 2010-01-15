@@ -1,9 +1,11 @@
 # == Attributes
-#   subscribable:         the model in your system that has the subscription. probably a User.
-#   subscription_plan:    which service plan this subscription is for. affects how payment is interpreted.
-#   paid_through:         when the subscription currently expires, assuming no further payment. for manual billing, this also determines when the next payment is due.
-#   last_transaction_at:  when the last gateway transaction was for this account. this is used by your gateway to find "new" transactions.
-#
+#   subscribable:         The model in your system that has the subscription. probably a User.
+#   subscription_plan:    Which service plan this subscription is for. 
+#   last_transaction_at:  Date the last gateway transaction was for this account. with 'recuring_billing' this is used by your gateway to find "new" transactions.
+#   paid_through:         Date the subscription currently expires, assuming no further payment. for manual billing, this also determines when the next payment is due.
+#   expires_on            Normally NULL. When an account is past due, expires_on will be set to the last day of the grace period
+#   started_on:           Date that the user started their subscription. This is reset when the user changes SubscriptionPlans
+
 module Freemium
   module Subscription
     include Rates
@@ -31,7 +33,7 @@ module Freemium
           }
        }
 
-        before_validation :set_paid_through
+        before_validation_on_create :start_free_trial
         before_validation :set_started_on
         before_destroy :cancel_in_remote_system
         
@@ -62,39 +64,18 @@ module Freemium
     ##
     
     protected
-
+    
     def billing_key
-      if self.credit_card
-        return self.credit_card.billing_key
-      else
-        return nil
-      end
+      return self.credit_card ? self.credit_card.billing_key : nil
     end
 
-    def set_paid_through
-      if subscription_plan_id_changed? && !paid_through_changed?
-        if paid?
-          if new_record?
-            # paid + new subscription = in free trial
-            self.paid_through = Date.today + Freemium.days_free_trial
-            self.in_trial = true
-          elsif !self.in_trial? && self.original_plan && self.original_plan.paid?
-            # paid + not in trial + not new subscription + original sub was paid = calculate and credit for remaining value
-            value = self.remaining_value(original_plan)
-            self.paid_through = Date.today
-            self.credit(value)
-          else
-            # otherwise payment is due today
-            self.paid_through = Date.today
-            self.in_trial = false
-          end
-        else
-          # free plans don't pay
-          self.paid_through = nil
-        end
+    def start_free_trial
+      if Freemium.days_free_trial && paid? 
+        # paid + new subscription = in free trial
+        self.paid_through = Date.today + Freemium.days_free_trial
+        self.in_trial = true
       end
-      true
-    end    
+    end
 
     def set_started_on
       self.started_on = Date.today if subscription_plan_id_changed?
@@ -275,14 +256,18 @@ module Freemium
     # subscription plan's rate to be very much an edge case.
     def receive_payment(transaction)
       self.credit(transaction.amount)
+
+      ## This exception is rescued silently somewhere, which is very bad.
       self.save!
-      transaction.subscription.reload  # reloaded to that the paid_through date is correct
-      transaction.message = "now paid through #{self.paid_through}"
-      
+      transaction.subscription.reload  # reloaded so that the paid_through date is correct
+
+      transaction.message = "Paid through #{self.paid_through}"
+
       begin
-        Freemium.mailer.deliver_invoice(transaction)
-      rescue => e
-        transaction.message = "error sending invoice"
+        Freemium.mailer.deliver_payment_receipt(transaction)
+      rescue Exception => e
+        transaction.message = "Error sending payment receipt."
+        HoptoadNotifier.notify(e)
       end
     end
     

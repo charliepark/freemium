@@ -160,7 +160,7 @@ class SubscriptionTest < ActiveSupport::TestCase
     assert_equal (paid_through + 15).to_s, subscription.paid_through.to_s, "extended by 15 days"
   end
 
-  def test_receiving_payment_sends_invoice
+  def test_receiving_payment_sends_payment_receipt
     subscription = freemium_subscriptions(:bobs_subscription)
     ActionMailer::Base.deliveries = []
     transaction = create_transaction_for(freemium_subscription_plans(:basic).rate, subscription)
@@ -168,7 +168,7 @@ class SubscriptionTest < ActiveSupport::TestCase
     assert_equal 1, ActionMailer::Base.deliveries.size
   end
 
-  def test_receiving_payment_when_sending_invoice_asplodes
+  def test_receiving_payment_when_sending_payment_receipt_asplodes
     subscription = freemium_subscriptions(:bobs_subscription)
     paid_through = subscription.paid_through
     Freemium.mailer.expects(:deliver_invoice).raises(RuntimeError,"Failed")

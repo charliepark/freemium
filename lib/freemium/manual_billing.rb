@@ -1,5 +1,12 @@
 module Freemium
-  # adds manual billing functionality to the Subscription class
+  ## Adds 'manual billing' functionality to the Subscription class. Manual
+  ## billing means that you are not using 'recurring billing' functionality
+  ## of your payment processor. Instead you will run the 'run_billing' method
+  ## each day, and freemium will make sure accounts get charged appropriately.
+  ## You can call 'run_billing' from a cron job with this command:
+  ## /PATH/TO/DEPLOYED/APP/script/runner -e production FreemiumSubscription.run_billing
+
+  ## JCS: I'm not sure what's up with the instance variables in here. Maybe they should be local variables?
   module ManualBilling
     def self.included(base)
       base.extend ClassMethods
@@ -25,7 +32,9 @@ module Freemium
         elsif !@transaction.subscription.in_grace?
           expire_after_grace!(@transaction)
         end
-      rescue
+      rescue Exception => e
+        logger.error "(#{ e.class }) #{ e } in ManualBilling charge!"
+        HoptoadNotifier.notify(e)
       end
       
       @transaction
@@ -35,7 +44,10 @@ module Freemium
       # the process you should run periodically
       def run_billing
         # charge all billable subscriptions
-        @transactions = find_billable.collect{|b| b.charge!}
+        @transactions = find_billable.collect do |billable|
+          billable.charge!
+        end
+
         # actually expire any subscriptions whose time has come
         expire
 
@@ -45,6 +57,10 @@ module Freemium
         ) if Freemium.admin_report_recipients && !@transactions.empty?
         
         @transactions
+      end
+
+      def bill_just_one
+        find_billable.first.charge!
       end
 
       protected

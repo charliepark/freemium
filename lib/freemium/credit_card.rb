@@ -192,7 +192,9 @@ module Freemium
         begin 
           month_days[2] = 29 if Date.leap?(@year)
           self['expiration_date'] = Time.parse("#{@month}/#{month_days[@month]}/#{@year} 23:59:59")
-        rescue
+        rescue Exception => e
+          logger.error "(#{ e.class }) #{ e } in credit_card expiration_date"
+          HoptoadNotifier.notify(e)
         end
       end  
       self['expiration_date']

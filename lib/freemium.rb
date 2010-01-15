@@ -43,7 +43,7 @@ module Freemium
     attr_writer :expired_plan
     def expired_plan
       unless @expired_plan 
-        @expired_plan =   FreemiumSubscriptionPlan.find_by_redemption_key(expired_plan_key.to_s) unless expired_plan_key.nil?
+        @expired_plan =   FreemiumSubscriptionPlan.find_by_key(expired_plan_key.to_s) unless expired_plan_key.nil?
         @expired_plan ||= FreemiumSubscriptionPlan.find(:first, :conditions => "rate_cents = 0")
       end
       @expired_plan
@@ -56,5 +56,11 @@ module Freemium
     # These will be bcc'd on all SubscriptionMailer emails, and will also receive the
     # admin activity report.
     attr_accessor :admin_report_recipients
+
+    attr_writer :logger
+    def logger
+      @logger ||= Rails.logger
+    end
   end
+
 end

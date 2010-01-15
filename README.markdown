@@ -41,9 +41,11 @@ So there's some possible slack in the timeline. Suppose a subscription is paid t
   > ./script/generate freemium_migration
   > rake db:migrate
 
-2) Populate the database with your subscription plan (create a migration to create SubscriptionPlan records)
+2) Populate the database with your subscription plan (create a migration to create SubscriptionPlan records).
 
   > ./script/generate migration populate_subscription_plans
+
+  'expired' and 'canceled' are good plans to start the table with.
 
 3) Create config/initializers/freemium.rb and configure at least the following:
 
@@ -52,13 +54,13 @@ So there's some possible slack in the timeline. Suppose a subscription is paid t
   grace period    in days, zero days grace is ok
   mailer          for customized invoices, etc.
 
-4) Create a SubscriptionsController (or similar) that does whatever it takes to get a unique billing key. This might mean storing the credit card (e.g. TrustCommerce Citadel) and/or setting up automated recurring billing, or getting the three keys from Amazon FPS. Most of these gateways don't have concrete API classes in Freemium yet. If you write a gateway, let me know and I'll include it.
+4) Create a SignupController (or similar) that does whatever it takes to get a unique billing key. This means you will have to get the credit card information from the user, create a CreditCard object, and save the object. Saving the CreditCard will activate a callback  that stores the credit card information with your payment processor. The corresponding billing_key will be stored in your database as a part of the CreditCard object.
 
 5) Create association from your User model (or whatever) to the Subscription model.
 
 6) Add a before_filter (or other logic) to properly enforce your premium plan. The filter should check that the User has an active Subscription to a SubscriptionPlan of the appropriate type.
 
-7) Add `/PATH/TO/DEPLOYED/APP/script/runner -e production Subscription.run_billing' to a daily cron task.
+7) Add `/PATH/TO/DEPLOYED/APP/script/runner -e production FreemiumSubscription.run_billing' to a daily cron task.
 
 8) Tell me how any of this could be improved. I want this plugin to make freemium billing dead-simple.
 

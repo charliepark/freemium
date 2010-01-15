@@ -62,7 +62,7 @@ module Freemium
           :amount => sprintf("%.2f", amount.cents.to_f / 100)
         })
         p.commit
-        return FreemiumTransaction.new(:billing_key => vault_id, :amount => amount, :success => p.response.success?)
+        return FreemiumTransaction.new(:billing_key => vault_id, :amount => amount, :success => p.response.success?, :message => p.response.message)
       end
 
       # Removes a card from SecureVault. Called automatically when the subscription expires.
@@ -111,7 +111,9 @@ module Freemium
         end
 
         def commit
-          data = parse(post)
+          Freemium.logger.info "Post to Braintree: #{@params.inspect}"
+          data = parse(post!)
+          Freemium.logger.info "Response from Braintree: #{data.inspect}"
           # from BT API: 1 means approved, 2 means declined, 3 means error
           success = data['response'].to_i == 1
           @response = Freemium::Response.new(success, data)
@@ -133,7 +135,7 @@ module Freemium
         end
 
         # cf. ActiveMerchant's PostsData module.
-        def post
+        def post!
           uri   = URI.parse(self.url)
 
           http = Net::HTTP.new(uri.host, uri.port)

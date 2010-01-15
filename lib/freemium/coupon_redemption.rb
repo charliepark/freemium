@@ -5,6 +5,8 @@ module Freemium
       base.class_eval do
         belongs_to :subscription, :class_name => "FreemiumSubscription"
         belongs_to :coupon, :class_name => "FreemiumCoupon"
+
+        attr_accessible :coupon, :subscription
         
         before_create :set_redeemed_on
         

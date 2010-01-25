@@ -27,11 +27,16 @@ module Freemium
             :conditions =>  ['paid_through <= ?', Date.today] # could use the concept of a next retry date
           }
         }
+
         named_scope :expired, lambda {
           {
             :conditions => ['expire_on >= paid_through AND expire_on <= ?', Date.today]
           }
        }
+
+        named_scope :trial_ends_soon, lambda {
+          {:conditions => ["in_trial = 1 AND paid_through <= ?", Date.today + 5.days]}
+        }
 
         before_validation_on_create :start_free_trial
         before_validation :set_started_on
@@ -262,6 +267,8 @@ module Freemium
       transaction.subscription.reload  # reloaded so that the paid_through date is correct
 
       transaction.message = "Paid through #{self.paid_through}"
+      transaction.credited = true
+      transaction.save!
 
       begin
         Freemium.mailer.deliver_payment_receipt(transaction)

@@ -9,6 +9,14 @@ class SubscriptionMailer < ActionMailer::Base
     @bcc                  = Freemium.admin_report_recipients if Freemium.admin_report_recipients
   end
 
+  def trial_ends_soon_warning(subscription)
+    setup_email(subscription.subscribable)
+    puts "trial ends warning for #{subscription.subscribable.username}"
+    @subject              = "Your subscription begins soon"
+    @body[:subscription]  = subscription
+    @body[:user]          = subscription.subscribable
+  end
+
   def expiration_warning(subscription)
     setup_email(subscription.subscribable)
     @subject              = "Your subscription is set to expire"

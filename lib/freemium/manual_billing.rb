@@ -29,11 +29,11 @@ module Freemium
     
       begin
         if @transaction.success? 
-          receive_payment!(@transaction)
+          receive_payment!(@transaction)          
         elsif !@transaction.subscription.in_grace?
           expire_after_grace!(@transaction)
         end
-      rescue Exception => e
+      rescue StandardError => e
         logger.error "(#{ e.class }) #{ e } in ManualBilling charge!"
         HoptoadNotifier.notify(e)
       end
@@ -56,6 +56,15 @@ module Freemium
         Freemium.mailer.deliver_admin_report(
           @transactions # Add in transactions
         ) if Freemium.admin_report_recipients && !@transactions.empty?
+
+        # Warn users whose free trial is about to expire
+        
+        find_warn_about_trial_ending.each do |subscription|
+          Freemium.mailer.deliver_trial_ends_soon_warning(subscription)
+          subscription.sent_trial_ends = true
+          subscription.save!
+          
+        end
         
         @transactions
       end
@@ -70,7 +79,11 @@ module Freemium
       # subscriptions that expire the day *after* the given date. 
       # because of coupons we can't trust rate_cents alone and need to verify that the account is indeed paid?
       def find_billable
-        self.paid.due.select{|s| s.paid?}
+        self.paid.due.select{|s| s.paid? }
+      end
+
+      def find_warn_about_trial_ending
+        self.paid.trial_ends_soon.scoped(:conditions => {:sent_trial_ends => false})
       end
     end
   end

@@ -62,7 +62,8 @@ module Freemium
           :amount => sprintf("%.2f", amount.cents.to_f / 100)
         })
         p.commit
-        return FreemiumTransaction.new(:billing_key => vault_id, :amount => amount, :success => p.response.success?, :message => p.response.message)
+    
+        return FreemiumTransaction.new(:billing_key => vault_id, :amount => amount, :success => p.response.success?, :message => p.response.message, :transactionid => p.response["transactionid"])
       end
 
       # Removes a card from SecureVault. Called automatically when the subscription expires.
@@ -105,15 +106,17 @@ module Freemium
         attr_accessor :params
         attr_reader :response
 
+        FILTERED_PARAMETERS = %w{username password ccnumber ccexp cvv checkaba checkaccount account_type}
+
         def initialize(url, params = {})
           self.url = url
           self.params = params
         end
 
         def commit
-          Freemium.logger.info "Post to Braintree: #{@params.inspect}"
+          Freemium.logger.info "Post to Braintree: #{filter_parameters(@params).inspect}"
           data = parse(post!)
-          Freemium.logger.info "Response from Braintree: #{data.inspect}"
+          Freemium.logger.info "Response from Braintree: #{filter_parameters(data).inspect}"
           # from BT API: 1 means approved, 2 means declined, 3 means error
           success = data['response'].to_i == 1
           @response = Freemium::Response.new(success, data)
@@ -147,6 +150,21 @@ module Freemium
           data = self.params.collect { |k, v| "#{k}=#{CGI.escape(v.to_s)}" }.join("&")
           http.post(uri.request_uri, data).body
         end
+
+        def filter_parameters(unfiltered_params)
+          filter = Regexp.new(FILTERED_PARAMETERS.collect{ |s| s.to_s }.join('|'), true)
+          
+          filtered_parameters = {}
+          unfiltered_params.each do |key, value|
+            if key.to_s =~ filter
+              filtered_parameters[key] = '[FILTERED]'
+            else
+              filtered_parameters[key] = value
+            end
+          end
+          return filtered_parameters
+        end
+
       end
     end
   end

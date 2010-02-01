@@ -42,7 +42,7 @@ module Freemium
       base.class_eval do
         # Essential attributes for a valid, non-bogus creditcards
         attr_reader :number
-        attr_accessor :month, :year, :first_name, :last_name
+        attr_accessor :first_name, :last_name
 
         # Required for Switch / Solo cards
         attr_accessor :start_month, :start_year, :issue_number
@@ -57,11 +57,34 @@ module Freemium
         
         before_validation :sanitize_data, :if => :changed?
         before_save :store_credit_card_offsite
+        before_destroy :cancel_in_remote_system
+
+        def month
+          return @month if @month
+          return expiration_date.month if expiration_date
+          return nil
+        end
+
+        def month=(new_month)
+          @month = new_month.to_i
+        end
+
+        def year
+          return @year if @year
+          return expiration_date.year if expiration_date
+          return nil
+        end
+    
+        def year=(new_year)
+          @year = new_year.to_i
+          @year = @year + 2000 if @year < 100
+        end
+
       end
       
       base.extend(ClassMethods)
-    end    
-    
+    end
+
     ##
     ## Callbacks
     ##
@@ -69,26 +92,27 @@ module Freemium
     protected
     
     def sanitize_data #:nodoc: 
-      self.month = month.to_i
-      self.year  = year.to_i
+      self.set_expiration_date(year, month) if @year 
       self.number = number.to_s.gsub(/[^\d]/, "")
       self.card_type.downcase! if card_type.respond_to?(:downcase)
       self.card_type = self.class.card_type?(number) if card_type.blank?
     end
 
-    # Simple assignment of a credit card. Note that this may not be
-    # useful for your particular situation, especially if you need
-    # to simultaneously set up automated recurrences.
-    #
+    def set_expiration_date(year, month)
+      self['expiration_date'] = Date.strptime("#{year}-#{month}", '%Y-%m') + 1.month - 1.day
+    end
+
     # Because of the third-party interaction with the gateway, you
     # need to be careful to only use this method when you expect to
     # be able to save the record successfully. Otherwise you may end
     # up storing a credit card in the gateway and then losing the key.
-    #
-    # NOTE: Support for updating an address could easily be added
-    # with an "address" property on the credit card.
     def store_credit_card_offsite
       if self.changed? && self.valid?
+
+        ## If this CreditCard object already has a billing_key, then 
+        ## delete it at the payment processor before getting a new one.
+        cancel_in_remote_system
+
         response = billing_key ? Freemium.gateway.update(billing_key, self, self.address) : Freemium.gateway.store(self, self.address)
         raise Freemium::CreditCardStorageError.new(response.message) unless response.success?
         self.billing_key = response.billing_key
@@ -99,6 +123,13 @@ module Freemium
       unless subscription.paid?
         cancel_in_remote_system
         self.destroy
+      end
+    end
+
+    def cancel_in_remote_system
+      if billing_key
+        Freemium.gateway.cancel(self.billing_key)
+        self.billing_key = nil
       end
     end
     
@@ -180,30 +211,15 @@ module Freemium
       end
 
     end
+
+    def expired?
+      return false unless expiration_date
+      Date.today > expiration_date
+    end
     
     ##
     ## From ActiveMerchant::Billing::CreditCard
     ##    
-
-    # Provides proxy access to an expiry date object
-    def expiration_date
-      unless self['expiration_date']
-        month_days = [nil,31,28,31,30,31,30,31,31,30,31,30,31]
-        begin 
-          month_days[2] = 29 if Date.leap?(@year)
-          self['expiration_date'] = Time.parse("#{@month}/#{month_days[@month]}/#{@year} 23:59:59")
-        rescue Exception => e
-          logger.error "(#{ e.class }) #{ e } in credit_card expiration_date"
-          HoptoadNotifier.notify(e)
-        end
-      end  
-      self['expiration_date']
-    end
-
-    def expired?
-      return false unless expiration_date
-      Time.now > expiration_date
-    end
     
     def name?
       first_name? && last_name?
@@ -253,7 +269,7 @@ module Freemium
     
     # We're overriding AR#changed? to include instance vars that aren't persisted to see if a new card is being set
     def changed?
-      card_type_changed? || ![:number, :month, :year, :first_name, :last_name, :start_month, :start_year, :issue_number, :verification_value].select{|attr| !self.send(attr).nil?}.empty?
+      card_type_changed? || [:number, :month, :year, :first_name, :last_name, :start_month, :start_year, :issue_number, :verification_value].select{|attr| !self.send(attr).blank?}.first # 'first' returns nil if the array is empty
     end
 
     ##

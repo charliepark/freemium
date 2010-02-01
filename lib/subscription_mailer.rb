@@ -11,7 +11,6 @@ class SubscriptionMailer < ActionMailer::Base
 
   def trial_ends_soon_warning(subscription)
     setup_email(subscription.subscribable)
-    puts "trial ends warning for #{subscription.subscribable.username}"
     @subject              = "Your subscription begins soon"
     @body[:subscription]  = subscription
     @body[:user]          = subscription.subscribable

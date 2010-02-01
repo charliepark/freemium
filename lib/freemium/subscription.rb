@@ -40,7 +40,6 @@ module Freemium
 
         before_validation_on_create :start_free_trial
         before_validation :set_started_on
-        before_destroy :cancel_in_remote_system
         
         after_create :audit_create
         after_update :audit_update
@@ -84,13 +83,6 @@ module Freemium
 
     def set_started_on
       self.started_on = Date.today if subscription_plan_id_changed?
-    end
-    
-    def cancel_in_remote_system
-      if billing_key
-        Freemium.gateway.cancel(self.billing_key)
-        self.billing_key = nil
-      end
     end
     
     ##

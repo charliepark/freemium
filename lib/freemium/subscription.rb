@@ -242,7 +242,17 @@ module Freemium
     # receives payment and saves the record
     def receive_payment!(transaction)
       receive_payment(transaction)
-      self.save!
+      unless self.valid?
+        logger.error "Error updating subscription in 'receive_payment'."
+        logger.error "Subscription errors: #{self.errors.full_messages}"
+        logger.error "CreditCard errors: #{self.credit_card.errors.full_messages if self.credit_card}"
+
+        HoptoadNotifier.notify(
+           :error_class   => "Error updating subscription",
+           :error_message => "There was an error saving the subscription object in 'receive_payment!'. Subscription errors: #{self.errors.full_messages}. CreditCard errors: #{self.credit_card.errors.full_messages if self.credit_card}.")
+      end
+
+      self.save(false)
     end
 
     # extends the paid_through period according to how much money was received.
@@ -253,13 +263,9 @@ module Freemium
     # subscription plan's rate to be very much an edge case.
     def receive_payment(transaction)
       self.credit(transaction.amount)
-
-      ## This exception is rescued silently somewhere, which is very bad.
-      self.save!
-      transaction.subscription.reload  # reloaded so that the paid_through date is correct
-
       transaction.message = "Paid through #{self.paid_through}"
       transaction.credited = true
+
       transaction.save!
 
       begin
@@ -271,10 +277,10 @@ module Freemium
     end
     
     def credit(amount)
-      self.paid_through = if amount.cents % rate.cents == 0
-        self.paid_through + (amount.cents / rate.cents).months
+      if amount.cents % rate.cents == 0
+        self.paid_through = self.paid_through + (amount.cents / rate.cents).months
       else
-        self.paid_through + (amount.cents / daily_rate.cents).days
+        self.paid_through = self.paid_through + (amount.cents / daily_rate.cents).days
       end 
       
       # if they've paid again, then reset expiration

@@ -269,7 +269,9 @@ module Freemium
     
     # We're overriding AR#changed? to include instance vars that aren't persisted to see if a new card is being set
     def changed?
-      card_type_changed? || [:number, :month, :year, :first_name, :last_name, :start_month, :start_year, :issue_number, :verification_value].select{|attr| !self.send(attr).blank?}.first # 'first' returns nil if the array is empty
+      card_type_changed? || 
+      @year || @month ||
+      [:number, :first_name, :last_name, :start_month, :start_year, :issue_number, :verification_value].select{|attr| !self.send(attr).blank?}.first # 'first' returns nil if the array is empty
     end
 
     ##

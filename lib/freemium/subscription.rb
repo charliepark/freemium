@@ -126,7 +126,7 @@ module Freemium
     
     module ClassMethods
       # expires all subscriptions that have been pastdue for too long (accounting for grace)
-      def expire
+      def expire_all
         self.expired.select{|s| s.paid?}.each(&:expire!)
       end      
     end
@@ -213,17 +213,19 @@ module Freemium
     ##
 
     # sets the expiration for the subscription based on today and the configured grace period.
-    def expire_after_grace!(transaction = nil)
-      return unless self.expire_on.nil? # You only set this once subsequent failed transactions shouldn't affect expiration
+    def start_grace_period!(transaction=nil)
+      ## You only set the expires_on date once
+      return unless self.expire_on.nil? 
       self.expire_on = [Date.today, paid_through].max + Freemium.days_grace
-      transaction.message = "now set to expire on #{self.expire_on}" if transaction
-      Freemium.mailer.deliver_expiration_warning(self)
+
+      if transaction
+        m = " (Subscription set to expire on #{self.expire_on} .)"
+        transaction.message ? transaction.message << m : transaction.message = m
+      end
       save!
     end
 
-    # sends an expiration email, then downgrades to a free plan
     def expire!
-      Freemium.mailer.deliver_expiration_notice(self)
       # downgrade to a free plan
       self.expire_on = Date.today
       self.subscription_plan = Freemium.expired_plan

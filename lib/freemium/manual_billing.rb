@@ -28,11 +28,17 @@ module Freemium
       self.save(false)
     
       begin
-        if @transaction.success? 
-          receive_payment!(@transaction)          
-        elsif !@transaction.subscription.in_grace?
-          expire_after_grace!(@transaction)
+        if @transaction.success?
+          receive_payment!(@transaction)
+          Freemium.mailer.deliver_payment_receipt(transaction)
+        elsif self.expired?
+          Freemium.mailer.deliver_expiration_notice(self)
+          self.expire!
+        else 
+          start_grace_period!(@transaction) unless self.in_grace?
+          Freemium.mailer.deliver_expiration_warning(self)
         end
+          
       rescue StandardError => e
         logger.error "(#{ e.class }) #{ e } in ManualBilling charge!"
         HoptoadNotifier.notify(e)
@@ -49,16 +55,12 @@ module Freemium
           billable.charge!
         end
 
-        # actually expire any subscriptions whose time has come
-        expire
-
         # send the activity report
         Freemium.mailer.deliver_admin_report(
           @transactions # Add in transactions
         ) if Freemium.admin_report_recipients && !@transactions.empty?
 
-        # Warn users whose free trial is about to expire
-        
+        ## Warn users whose free trial is about to end
         find_warn_about_trial_ending.each do |subscription|
           Freemium.mailer.deliver_trial_ends_soon_warning(subscription)
           subscription.sent_trial_ends = true

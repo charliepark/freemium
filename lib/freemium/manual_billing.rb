@@ -30,7 +30,7 @@ module Freemium
       begin
         if @transaction.success?
           receive_payment!(@transaction)
-          Freemium.mailer.deliver_payment_receipt(transaction)
+          Freemium.mailer.deliver_payment_receipt(@transaction)
         elsif self.expired?
           Freemium.mailer.deliver_expiration_notice(self)
           self.expire!

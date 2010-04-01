@@ -1,6 +1,6 @@
 # == Attributes
 #   billing_key: the id for this user in the remote billing gateway. may not exist if user is on a free plan.
-#   card_type: the issuing credit card company, can be assigned automatically from the credit card number during  :sanitize_data
+#   card_type: the issuing credit card company, can be assigned automatically from the credit card number
 #   display_number: The last four digits of the credit card number, stored as "XXX-XXX-XXX-NNNN" automatically when a number is assigned to self.number
 #   expiration_date: the credit card expiration date
 #   zip_code: the credit card zip code
@@ -59,6 +59,11 @@ module Freemium
         before_save :store_credit_card_offsite
         before_destroy :cancel_in_remote_system
 
+        def number=(new_number)
+          @number = new_number.to_s.gsub(/[^\d]/, "")
+          self.card_type = self.class.card_type?(number)
+        end
+
         def month
           return @month if @month
           return expiration_date.month if expiration_date
@@ -93,9 +98,7 @@ module Freemium
     
     def sanitize_data #:nodoc: 
       self.set_expiration_date(year, month) if @year 
-      self.number = number.to_s.gsub(/[^\d]/, "")
       self.card_type.downcase! if card_type.respond_to?(:downcase)
-      self.card_type = self.class.card_type?(number) if card_type.blank?
     end
 
     def set_expiration_date(year, month)

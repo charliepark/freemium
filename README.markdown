@@ -2,7 +2,7 @@
 
 Freemium was written by Lance Ivy in an attempt to "encapsulate the Right Way to offer service subscriptions".
 
-This version is maintained by ExpanDrive for use on their Strongspace service.
+This version is a tweak of the copy maintained by ExpanDrive for use on their Strongspace service. This copy was adjusted by Charlie Park.
 
 ## Gateway Requirements
 
@@ -35,6 +35,11 @@ So there's some possible slack in the timeline. Suppose a subscription is paid t
 * Expiring a subscription means downgrading it to a free plan (if any) or removing the plan altogether.
 
 # Install
+
+0) Copy the plugin to your local computer. Also, make sure the Money plugin is on your machine.
+
+  > script/plugin install git://github.com/charliepark/freemium.git
+  > gem install money
 
 1) Generate and run the migration:
 

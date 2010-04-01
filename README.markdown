@@ -44,13 +44,34 @@ So there's some possible slack in the timeline. Suppose a subscription is paid t
 1) Generate and run the migration:
 
   > ./script/generate freemium_migration
+
   > rake db:migrate
 
 2) Populate the database with your subscription plan (create a migration to create SubscriptionPlan records).
 
   > ./script/generate migration populate_subscription_plans
 
-  'expired' and 'canceled' are good plans to start the table with.
+Then populate that migration with something like the following:
+
+  > def self.up
+
+  >  SubscriptionPlan.create(:name => "comped", :rate_cents => 0)
+
+  >  SubscriptionPlan.create(:name => "expired", :rate_cents => 0)
+
+  >  SubscriptionPlan.create(:name => "monthly_1000", :rate_cents => 1000)
+
+  >end
+
+  >
+
+  >def self.down
+
+  >  SubscriptionPlan.delete_all
+
+  >end
+
+Note that I included the :rate_cents value in the name of the plan. You might want to _not_ include that, as it limits your flexibility. Since new subscription plans can be added easily, I'm comfortable with including the rate within the name, to make it less ambiguous when I'm calling and setting values within the program.
 
 3) Create config/initializers/freemium.rb and configure at least the following:
 

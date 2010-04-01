@@ -2,7 +2,7 @@
 
 Freemium was written by Lance Ivy in an attempt to "encapsulate the Right Way to offer service subscriptions".
 
-This version is a tweak of the copy maintained by ExpanDrive for use on their Strongspace service. This copy was adjusted by Charlie Park.
+This version is a tweak of the copy maintained by ExpanDrive for use on their Strongspace service. This copy was adjusted by Charlie Park. Note: I'm not totally sure it works, yet, so you probably want to use another Freemium fork for now.
 
 ## Gateway Requirements
 

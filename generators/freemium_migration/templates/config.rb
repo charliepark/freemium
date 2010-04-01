@@ -18,7 +18,7 @@ Freemium.billing_handler = :manual
 ## The class name of mailer used to send out emails to subscriber. You will
 ## want to create your own mailer following the format of the included
 ## SubscriptionMailer.
-Freemium.mailer = SubsciptionMailer
+Freemium.mailer = SubscriptionMailer
  
 # uncomment to be cc'ed on all freemium emails that go out to the user
 #Freemium.admin_report_recipients = %w{admin@site.com}

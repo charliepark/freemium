@@ -1,8 +1,14 @@
+## Preamble
+
+*This branch of Freemium is not guaranteed to work. In fact, there's a good chance it doesn't. Please feel free to patch any obvious errors you see, but I would recommend NOT using this as the basis of your own branch.*
+
 ## Freemium
 
-Freemium was written by Lance Ivy in an attempt to "encapsulate the Right Way to offer service subscriptions".
+Freemium was written by Lance Ivy in an attempt to "encapsulate the Right Way to offer service subscriptions."
 
-This version is a tweak of the copy maintained by ExpanDrive for use on their Strongspace service. This copy was adjusted by Charlie Park. Note: I'm not totally sure it works, yet, so you probably want to use another Freemium fork for now.
+
+
+This version is a tweak of the copy maintained by ExpanDrive for use on their Strongspace service. This copy was adjusted by Charlie Park.
 
 ## Gateway Requirements
 
@@ -14,14 +20,18 @@ Freemium will only work with ARB modules that provide an API to retrieve and rev
 
 So what we really need is a list of known good and known bad gateways. The list below is just the beginning, off the top of my head.
 
-$$$ Good Gateways:
+### Good Gateways:
+
 * TrustCommerce with Citadel (can use Citadel and/or ARB)
+
 * Braintree Payment Solutions (SecureVault, or ARB)
 
-$$$ Probably Good Gateways:
+### Probably Good Gateways:
+
 * Authorize.net (CIM, or ARB if they also offer transaction review API)
 
 ### Bad Gateways:
+
 * LoudCommerce's LinkPoint (no storage, and no transaction review)
 
 # Expiration
@@ -76,8 +86,11 @@ Note that I included the :rate_cents value in the name of the plan. You might wa
 3) Create config/initializers/freemium.rb and configure at least the following:
 
   gateway         pick one, then see rdoc for your gateway's options to see what needs to be configured (api key, etc.)
+
   billing_control set to :full or :arb, depending on whether you're using your gateway's ARB module
+
   grace period    in days, zero days grace is ok
+
   mailer          for customized invoices, etc.
 
 4) Create a SignupController (or similar) that does whatever it takes to get a unique billing key. This means you will have to get the credit card information from the user, create a CreditCard object, and save the object. Saving the CreditCard will activate a callback  that stores the credit card information with your payment processor. The corresponding billing_key will be stored in your database as a part of the CreditCard object.

@@ -2,6 +2,8 @@
 
 *This branch of Freemium is not guaranteed to work. In fact, there's a good chance it doesn't. Please feel free to patch any obvious errors you see, but I would recommend NOT using this as the basis of your own branch.*
 
+**Actually, yeah. Don't use this code for now.**
+
 ## Freemium
 
 Freemium was written by Lance Ivy in an attempt to "encapsulate the Right Way to offer service subscriptions."
